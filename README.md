@@ -97,6 +97,18 @@ CREATE TABLE invoice_item_toppings (
     price DECIMAL(10,2) NOT NULL
 );
 
+- Afterwards Populate the toppings table
+
+-- Insert toppings
+INSERT INTO toppings (name, price) VALUES
+    ('Extra Cheese', 540.00),
+    ('BBQ Chicken', 820.00),
+    ('Pepperoni', 720.00),
+    ('Mushrooms', 420.00),
+    ('Onions', 220.00),
+    ('Bell Peppers', 320.00),
+    ('Olives', 380.00);
+
 
 - Update the database connection settings in your backend configuration 
   (backend/config/config.go)
