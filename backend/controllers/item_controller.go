@@ -102,6 +102,32 @@ func (c *ItemController) UpdateItem(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, item)
 }
 
+func (c *ItemController) UpdatePizzaPrices(ctx *gin.Context) {
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid item ID"})
+		return
+	}
+
+	var input models.UpdatePizzaPrice
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = c.itemService.UpdatePizzaPrices(id, input)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Pizza price not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Pizza price updated successfully"})
+}
+
 func (c *ItemController) DeleteItem(ctx *gin.Context) {
 	// Convert string ID to int
 	id, err := strconv.Atoi(ctx.Param("id"))

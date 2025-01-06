@@ -272,3 +272,26 @@ func (s *ItemService) GetToppings() ([]models.Topping, error) {
 
 	return toppings, nil
 }
+
+func (s *ItemService) UpdatePizzaPrices(itemID int, input models.UpdatePizzaPrice) error {
+	result, err := config.DB.Exec(`
+        UPDATE pizza_base_prices 
+        SET price = $1
+        WHERE item_id = $2 AND size = $3
+    `, input.Price, itemID, input.Size)
+
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}

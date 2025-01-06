@@ -53,6 +53,11 @@ type CreatePizzaPrice struct {
 	Price  float64 `json:"price"`
 }
 
+type UpdatePizzaPrice struct {
+	Size  string  `json:"size" binding:"required"`
+	Price float64 `json:"price" binding:"required"`
+}
+
 type Invoice struct {
 	ID          int           `json:"id"`
 	OrderNo     string        `json:"order_no"`

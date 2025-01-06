@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { Item } from '../types/item';
+import ItemModal from '../components/ItemModal';
 
 export default function ManageItems() {
   const [items, setItems] = useState<Item[]>([]);
@@ -23,6 +24,7 @@ export default function ManageItems() {
       large: ''
     }
   });
+  const [editItem, setEditItem] = useState<Item | null>(null);
 
   useEffect(() => {
     fetchItems();
@@ -152,12 +154,71 @@ export default function ManageItems() {
     }
   };
 
+  const handleEdit = (item: Item) => {
+    setEditItem(item);
+    setShowAddModal(true);
+  };
+
+  const handleSubmit = async (itemData: any) => {
+    try {
+      if (editItem) {
+        // Handle edit
+        const response = await fetch(`http://localhost:8080/api/items/${editItem.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ...itemData,
+            price: itemData.category === 'beverage' ? parseFloat(itemData.price) : null
+          }),
+        });
+
+        if (!response.ok) throw new Error('Failed to update item');
+
+        // If it's a pizza, update the base prices
+        if (itemData.category === 'pizza' && itemData.pizzaPrices) {
+          const sizes = ['small', 'medium', 'large'];
+          
+          for (const size of sizes) {
+            if (itemData.pizzaPrices[size]) {
+              const priceResponse = await fetch(`http://localhost:8080/api/pizzaprice/${editItem.id}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  size: size,
+                  price: parseFloat(itemData.pizzaPrices[size])
+                }),
+              });
+
+              if (!priceResponse.ok) {
+                throw new Error(`Failed to update price for ${size}`);
+              }
+            }
+          }
+        }
+      } else {
+        await handleAddItem();
+      }
+
+      await fetchItems();
+      setShowAddModal(false);
+      setEditItem(null);
+    } catch (err) {
+      console.error('Error saving item:', err);
+      alert(err instanceof Error ? err.message : 'An error occurred while saving the item');
+    }
+  };
+
   const filteredItems = items.filter(item => 
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
     item.category.toLowerCase() === activeTab
   );
 
   if (loading) {
+    
     return (
       <div className="flex justify-center items-center min-h-[200px]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
@@ -243,6 +304,7 @@ export default function ManageItems() {
                   Delete
                 </button>
                 <button
+                  onClick={() => handleEdit(item)}
                   className="flex-1 bg-[#00ADB5] text-white py-2 rounded-md hover:bg-[#007F85] transition-colors"
                 >
                   Edit Item
@@ -253,120 +315,15 @@ export default function ManageItems() {
         ))}
       </div>
 
-      {/* Add Item Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Add New Item</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Name</label>
-                <input
-                  type="text"
-                  value={newItem.name}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full p-2 border rounded-md"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Category</label>
-                <select
-                  value={newItem.category}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, category: e.target.value }))}
-                  className="w-full p-2 border rounded-md"
-                >
-                  <option value="pizza">Pizza</option>
-                  <option value="beverage">Beverage</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Description</label>
-                <textarea
-                  value={newItem.description}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full p-2 border rounded-md"
-                />
-              </div>
-              {newItem.category === 'beverage' ? (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Price</label>
-                  <input
-                    type="number"
-                    value={newItem.price}
-                    onChange={(e) => setNewItem(prev => ({ ...prev, price: e.target.value }))}
-                    className="w-full p-2 border rounded-md"
-                  />
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <h4 className="font-medium">Pizza Prices</h4>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Small</label>
-                      <input
-                        type="number"
-                        value={newItem.pizzaPrices.small}
-                        onChange={(e) => setNewItem(prev => ({
-                          ...prev,
-                          pizzaPrices: { ...prev.pizzaPrices, small: e.target.value }
-                        }))}
-                        className="w-full p-2 border rounded-md"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Medium</label>
-                      <input
-                        type="number"
-                        value={newItem.pizzaPrices.medium}
-                        onChange={(e) => setNewItem(prev => ({
-                          ...prev,
-                          pizzaPrices: { ...prev.pizzaPrices, medium: e.target.value }
-                        }))}
-                        className="w-full p-2 border rounded-md"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Large</label>
-                      <input
-                        type="number"
-                        value={newItem.pizzaPrices.large}
-                        onChange={(e) => setNewItem(prev => ({
-                          ...prev,
-                          pizzaPrices: { ...prev.pizzaPrices, large: e.target.value }
-                        }))}
-                        className="w-full p-2 border rounded-md"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium mb-1">Image</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="w-full"
-                />
-              </div>
-            </div>
-            <div className="mt-6 flex gap-4 justify-end">
-              <button
-                className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
-                onClick={() => setShowAddModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 bg-[#27B500] text-white rounded-md hover:bg-[#219400]"
-                onClick={handleAddItem}
-              >
-                Add Item
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ItemModal
+        isOpen={showAddModal}
+        onClose={() => {
+          setShowAddModal(false);
+          setEditItem(null);
+        }}
+        onSubmit={handleSubmit}
+        editItem={editItem}
+      />
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
