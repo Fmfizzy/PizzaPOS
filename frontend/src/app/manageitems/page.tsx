@@ -18,6 +18,7 @@ export default function ManageItems() {
     description: '',
     price: '',
     image_path: '',
+    is_available: true,
     pizzaPrices: {
       small: '',
       medium: '',
@@ -76,29 +77,56 @@ export default function ManageItems() {
     }
 };
 
-  const handleAddItem = async () => {
+  const handleAddItem = async (itemData: any) => {
     try {
-      // First create the item
+      // Validate required fields
+      if (!itemData?.name) {
+        throw new Error('Name is required');
+      }
+
+      if (!itemData?.category) {
+        throw new Error('Category is required');
+      }
+
+      if (itemData.category === 'beverage' && !itemData.price) {
+        throw new Error('Price is required for beverages');
+      }
+
+      // Prepare the request body
+      const requestBody = {
+        name: itemData.name,
+        category: itemData.category,
+        description: itemData.description || '',
+        is_available: true,
+        image_path: itemData.image_path || '',
+        price: itemData.category === 'beverage' ? parseFloat(itemData.price) : null
+      };
+
+      console.log('Sending request with body:', requestBody); // Debug log
+
       const response = await fetch('http://localhost:8080/api/items', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...newItem,
-          price: newItem.category === 'beverage' ? parseFloat(newItem.price) : null
-        }),
+        body: JSON.stringify(requestBody),
       });
 
-      if (!response.ok) throw new Error('Failed to add item');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add item');
+      }
 
       const addedItem = await response.json();
 
       // If it's a pizza, add the base prices
-      if (newItem.category === 'pizza') {
-        const sizePrices = ['small', 'medium', 'large'];
+      if (itemData.category === 'pizza' && itemData.pizzaPrices) {
+        const sizes = ['small', 'medium', 'large'] as const;
         
-        for (const size of sizePrices as Array<keyof typeof newItem.pizzaPrices>) {
+        for (const size of sizes) {
+          if (!itemData.pizzaPrices[size]) {
+            throw new Error(`Price for ${size} size is required for pizzas`);
+          }
           const priceResponse = await fetch('http://localhost:8080/api/pizzaprice', {
             method: 'POST',
             headers: {
@@ -107,7 +135,7 @@ export default function ManageItems() {
             body: JSON.stringify({
               item_id: addedItem.id,
               size: size,
-              price: parseFloat(newItem.pizzaPrices[size])
+              price: parseFloat(itemData.pizzaPrices[size])
             }),
           });
 
@@ -117,18 +145,11 @@ export default function ManageItems() {
         }
       }
 
-      await fetchItems(); // Refresh the items list
+      await fetchItems();
       setShowAddModal(false);
-      setNewItem({
-        name: '',
-        category: 'pizza',
-        description: '',
-        price: '',
-        image_path: '',
-        pizzaPrices: { small: '', medium: '', large: '' }
-      });
     } catch (err) {
       console.error('Error adding item:', err);
+      alert(err instanceof Error ? err.message : 'Failed to add item');
     }
   };
 
@@ -160,62 +181,57 @@ export default function ManageItems() {
   };
 
   const handleSubmit = async (itemData: any) => {
-    try {
-      if (editItem) {
-        // Handle edit
-        const response = await fetch(`http://localhost:8080/api/items/${editItem.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ...itemData,
-            price: itemData.category === 'beverage' ? parseFloat(itemData.price) : null
-          }),
-        });
+    if (editItem) {
+      // Handle edit
+      const response = await fetch(`http://localhost:8080/api/items/${editItem.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...itemData,
+          price: itemData.category === 'beverage' ? parseFloat(itemData.price) : null
+        }),
+      });
 
-        if (!response.ok) throw new Error('Failed to update item');
+      if (!response.ok) throw new Error('Failed to update item');
 
-        // If it's a pizza, update the base prices
-        if (itemData.category === 'pizza' && itemData.pizzaPrices) {
-          const sizes = ['small', 'medium', 'large'];
-          
-          for (const size of sizes) {
-            if (itemData.pizzaPrices[size]) {
-              const priceResponse = await fetch(`http://localhost:8080/api/pizzaprice/${editItem.id}`, {
-                method: 'PUT',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  size: size,
-                  price: parseFloat(itemData.pizzaPrices[size])
-                }),
-              });
+      // If it's a pizza, update the base prices
+      if (itemData.category === 'pizza' && itemData.pizzaPrices) {
+        const sizes = ['small', 'medium', 'large'];
+        
+        for (const size of sizes) {
+          if (itemData.pizzaPrices[size]) {
+            const priceResponse = await fetch(`http://localhost:8080/api/pizzaprice/${editItem.id}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                size: size,
+                price: parseFloat(itemData.pizzaPrices[size])
+              }),
+            });
 
-              if (!priceResponse.ok) {
-                throw new Error(`Failed to update price for ${size}`);
-              }
+            if (!priceResponse.ok) {
+              throw new Error(`Failed to update price for ${size}`);
             }
           }
         }
-      } else {
-        await handleAddItem();
       }
-
-      await fetchItems();
-      setShowAddModal(false);
-      setEditItem(null);
-    } catch (err) {
-      console.error('Error saving item:', err);
-      alert(err instanceof Error ? err.message : 'An error occurred while saving the item');
+    } else {
+      await handleAddItem(itemData);
     }
+
+    await fetchItems();
+    setShowAddModal(false);
+    setEditItem(null);
   };
 
-  const filteredItems = items.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    item.category.toLowerCase() === activeTab
-  );
+  const filteredItems = items?.filter(item => 
+    item?.name?.toLowerCase().includes(searchQuery.toLowerCase()) &&
+    item?.category?.toLowerCase() === activeTab
+  ) || [];
 
   if (loading) {
     

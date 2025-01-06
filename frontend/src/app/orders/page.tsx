@@ -213,13 +213,13 @@ export default function Orders() {
     }, 250);
   };
 
-  const filteredPizzas = pizzas.filter(pizza => 
-    pizza.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredPizzas = pizzas?.filter(pizza => 
+    pizza?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
 
-  const filteredBeverages = beverages.filter(beverage => 
-    beverage.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredBeverages = beverages?.filter(beverage => 
+    beverage?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
 
   if (loading) {
     return (
@@ -281,47 +281,59 @@ export default function Orders() {
         {activeTab === 'pizza' && (
           <div className="mb-8">
             <h2 className="text-xl font-semibold mb-4">Pizzas</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredPizzas.map((pizza) => (
-                <PizzaCard
-                  key={pizza.id}
-                  pizza={pizza}
-                  onAddToOrder={handleAddToOrder}
-                />
-              ))}
-            </div>
+            {filteredPizzas && filteredPizzas.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredPizzas.map((pizza) => (
+                  <PizzaCard
+                    key={pizza.id}
+                    pizza={pizza}
+                    onAddToOrder={handleAddToOrder}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                No pizzas currently available
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === 'beverage' && (
           <div>
             <h2 className="text-xl font-semibold mb-4">Beverages</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredBeverages.map((beverage) => (
-                <div
-                  key={beverage.id}
-                  className="border rounded-lg p-4 hover:shadow-lg transition-shadow"
-                >
-                  <div className="h-80 relative mb-4">
-                    <img
-                      src={beverage.image_path 
-                        ? `http://localhost:8080/${beverage.image_path}`
-                        : '/default-beverage.jpg'}
-                      alt={beverage.name}
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                  </div>
-                  <h3 className="font-semibold text-lg mb-2">{beverage.name}</h3>
-                  <button
-                    className="w-full mt-2 bg-[#00ADB5] text-white py-2 rounded-md hover:bg-[#007F85] transition-colors flex items-center justify-center"
-                    onClick={() => handleAddBeverageToOrder(beverage)}
+            {filteredBeverages && filteredBeverages.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredBeverages.map((beverage) => (
+                  <div
+                    key={beverage.id}
+                    className="border rounded-lg p-4 hover:shadow-lg transition-shadow"
                   >
-                    <img src="/shopping-cart.png" alt="Cart" className="w-4 h-4 mr-2" />
-                    {beverage.price && (<b>Add Rs {beverage.price.toFixed(2)}</b>)}
-                  </button>
-                </div>
-              ))}
-            </div>
+                    <div className="h-80 relative mb-4">
+                      <img
+                        src={beverage.image_path 
+                          ? `http://localhost:8080/${beverage.image_path}`
+                          : '/default-beverage.jpg'}
+                        alt={beverage.name}
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                    </div>
+                    <h3 className="font-semibold text-lg mb-2">{beverage.name}</h3>
+                    <button
+                      className="w-full mt-2 bg-[#00ADB5] text-white py-2 rounded-md hover:bg-[#007F85] transition-colors flex items-center justify-center"
+                      onClick={() => handleAddBeverageToOrder(beverage)}
+                    >
+                      <img src="/shopping-cart.png" alt="Cart" className="w-4 h-4 mr-2" />
+                      {beverage.price && (<b>Add Rs {beverage.price.toFixed(2)}</b>)}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                No beverages currently available
+              </div>
+            )}
           </div>
         )}
       </div>
