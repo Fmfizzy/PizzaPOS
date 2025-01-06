@@ -38,8 +38,8 @@ export default function OrderHistory() {
                   className="hover:bg-gray-50 cursor-pointer"
                 >
                   <td className="px-6 py-4 whitespace-nowrap">{invoice.order_no}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">${invoice.total_amount.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">${invoice.tax_amount.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">Rs &nbsp;{invoice.total_amount.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">Rs &nbsp;{invoice.tax_amount.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                       ${invoice.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
