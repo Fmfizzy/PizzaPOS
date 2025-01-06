@@ -144,3 +144,46 @@ PizzaPOS/
 ├── frontend/     # Next.js frontend application
 ├── backend/      # Go backend server
 ```
+
+## Toubleshooting
+Next.js Case Sensitivity Error Troubleshooting Guide
+
+The Problem
+If you see errors mentioning "multiple modules with names that only differ in casing" in your Next.js project, it means there's a case sensitivity conflict in your file paths. This commonly occurs when:
+
+Cloning a project from a different operating system
+Moving projects between Windows (case-insensitive) and Linux/Mac (case-sensitive)
+Accidentally using different cases in import statements
+
+Example Error
+CopyThere are multiple modules with names that only differ in casing.
+This can lead to unexpected behavior when compiling on a filesystem with other case-semantic.
+Quick Fix
+
+Check the correct case of your project directory
+bashCopy# If your directory shows up as both 'MyProject' and 'myproject'
+# Make sure to use the correct case consistently
+
+Clean your project
+bashCopy# Remove dependency directories
+rm -rf node_modules
+rm -rf .next
+
+# Clean npm cache
+npm cache clean --force
+
+Reinstall dependencies
+bashCopynpm install
+
+Restart development server
+bashCopynpm run dev
+
+
+Prevention Tips
+
+Always use consistent casing in your project names and file paths
+Use tools like ESLint with case-sensitive import rules
+When cloning repositories, double-check the correct case of the project name
+
+Note
+This issue is particularly common when working with Next.js projects across different operating systems, as Windows is case-insensitive while Unix-based systems (Linux, macOS) are case-sensitive.
