@@ -213,3 +213,35 @@ func (s *ItemService) GetPizzasWithPrices() ([]models.PizzaWithPrices, error) {
 
 	return pizzas, nil
 }
+
+func (s *ItemService) GetToppings() ([]models.Topping, error) {
+	var toppings []models.Topping
+
+	rows, err := config.DB.Query(`
+        SELECT id, name, price, is_available, created_at 
+        FROM toppings
+        WHERE is_available = true
+        ORDER BY name
+    `)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var topping models.Topping
+		err := rows.Scan(
+			&topping.ID,
+			&topping.Name,
+			&topping.Price,
+			&topping.IsAvailable,
+			&topping.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		toppings = append(toppings, topping)
+	}
+
+	return toppings, nil
+}

@@ -41,6 +41,9 @@ func main() {
 	r.GET("/api/pizzas-with-prices", itemController.GetPizzasWithPrices)
 	r.POST("/api/pizzaprice", itemController.CreatePizzaPrices)
 
+	// Toppings
+	r.GET("/api/toppings", itemController.GetToppings)
+
 	// Invoice routes
 	r.POST("/api/invoices", invoiceController.CreateInvoice)
 	r.GET("/api/invoices/:id", invoiceController.GetInvoice)

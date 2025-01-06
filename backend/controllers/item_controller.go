@@ -128,3 +128,13 @@ func (c *ItemController) GetPizzasWithPrices(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, pizzas)
 }
+
+func (c *ItemController) GetToppings(ctx *gin.Context) {
+	toppings, err := c.itemService.GetToppings()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, toppings)
+}
