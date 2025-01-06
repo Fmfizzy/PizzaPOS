@@ -18,27 +18,26 @@ func (s *InvoiceService) CreateInvoice(input models.CreateInvoiceInput) (*models
 	// Calculate total amount and tax
 	var totalAmount float64 = 0
 	for _, item := range input.Items {
-		// Get base price for pizza or regular price for beverage
-		var unitPrice float64
+		var basePrice float64
 		if item.PizzaSize != nil {
 			err := tx.QueryRow(`
                 SELECT price FROM pizza_base_prices 
                 WHERE item_id = $1 AND size = $2
-            `, item.ItemID, item.PizzaSize).Scan(&unitPrice)
+            `, item.ItemID, item.PizzaSize).Scan(&basePrice)
 			if err != nil {
 				return nil, err
 			}
 		} else {
 			err := tx.QueryRow(`
                 SELECT price FROM items WHERE id = $1
-            `, item.ItemID).Scan(&unitPrice)
+            `, item.ItemID).Scan(&basePrice)
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		// Add topping prices
-		var toppingTotal float64 = 0
+		// Calculate toppings total
+		var toppingsTotal float64 = 0
 		for _, topping := range item.Toppings {
 			var toppingPrice float64
 			err := tx.QueryRow(`
@@ -47,13 +46,14 @@ func (s *InvoiceService) CreateInvoice(input models.CreateInvoiceInput) (*models
 			if err != nil {
 				return nil, err
 			}
-			toppingTotal += toppingPrice * float64(topping.Quantity)
+			toppingsTotal += toppingPrice * float64(topping.Quantity)
 		}
 
-		totalAmount += (unitPrice + toppingTotal) * float64(item.Quantity)
+		itemTotal := (basePrice + toppingsTotal) * float64(item.Quantity)
+		totalAmount += itemTotal
 	}
 
-	taxAmount := totalAmount * 0.13 // 13% tax
+	taxAmount := totalAmount * 0.05 // 5% tax
 
 	// Create invoice
 	var invoice models.Invoice
@@ -75,24 +75,43 @@ func (s *InvoiceService) CreateInvoice(input models.CreateInvoiceInput) (*models
 
 	// Create invoice items
 	for _, item := range input.Items {
-		var invoiceItem models.InvoiceItem
-		var unitPrice float64
+		// Calculate item price including toppings
+		var basePrice float64
+		if item.PizzaSize != nil {
+			err = tx.QueryRow(`
+				SELECT price FROM pizza_base_prices 
+				WHERE item_id = $1 AND size = $2
+			`, item.ItemID, item.PizzaSize).Scan(&basePrice)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			err = tx.QueryRow(`
+				SELECT price FROM items WHERE id = $1
+			`, item.ItemID).Scan(&basePrice)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		// Insert invoice item
+		var invoiceItemID int
 		err = tx.QueryRow(`
             INSERT INTO invoice_items (invoice_id, item_id, pizza_size, quantity, unit_price, subtotal)
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING id
-        `, invoice.ID, item.ItemID, item.PizzaSize, item.Quantity, unitPrice,
-			unitPrice*float64(item.Quantity)).Scan(&invoiceItem.ID)
+        `, invoice.ID, item.ItemID, item.PizzaSize, item.Quantity, basePrice,
+			basePrice*float64(item.Quantity)).Scan(&invoiceItemID)
 		if err != nil {
 			return nil, err
 		}
 
-		// Create invoice item toppings
+		// Insert toppings if any
 		for _, topping := range item.Toppings {
 			_, err = tx.Exec(`
                 INSERT INTO invoice_item_toppings (invoice_item_id, topping_id, quantity, price)
                 VALUES ($1, $2, $3, (SELECT price FROM toppings WHERE id = $2))
-            `, invoiceItem.ID, topping.ToppingID, topping.Quantity)
+            `, invoiceItemID, topping.ToppingID, topping.Quantity)
 			if err != nil {
 				return nil, err
 			}

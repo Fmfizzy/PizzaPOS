@@ -5,7 +5,7 @@ import CustomizeModal from './CustomizeModal';
 
 interface PizzaCardProps {
     pizza: PizzaWithPrices;
-    onAddToOrder?: (pizza: PizzaWithPrices, size: string, toppings: SelectedTopping[]) => void;
+    onAddToOrder: (pizza: PizzaWithPrices, size: string, toppings: SelectedTopping[]) => void;
 }
 
 export default function PizzaCard({ pizza, onAddToOrder }: PizzaCardProps) {
@@ -79,7 +79,7 @@ export default function PizzaCard({ pizza, onAddToOrder }: PizzaCardProps) {
                 )}
 
                 <button
-                    onClick={() => onAddToOrder?.(pizza, selectedSize, selectedToppings)}
+                    onClick={() => onAddToOrder(pizza, selectedSize, selectedToppings)}
                     className="mt-4 bg-[#00ADB5] text-white py-2 rounded-md hover:bg-[#007F85] transition-colors flex items-center justify-center"
                 >
                     <img src="/shopping-cart.png" alt="Cart" className="w-4 h-4 mr-2" />

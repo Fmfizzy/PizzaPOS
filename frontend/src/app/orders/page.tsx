@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react'
-import { PizzaWithPrices, Item } from '../types/item'
+import { PizzaWithPrices, Item, OrderedItem, SelectedTopping } from '../types/item'
 import PizzaCard from '../components/PizzaCard'
+import OrderedItemCard from '../components/OrderedItemCard'
 
 export default function Orders() {
   const [orderNo, setOrderNo] = useState<string>('10000')
@@ -10,6 +11,7 @@ export default function Orders() {
   const [beverages, setBeverages] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [orderedItems, setOrderedItems] = useState<OrderedItem[]>([])
 
   const fetchLatestOrderNo = async () => {
     try {
@@ -47,23 +49,105 @@ export default function Orders() {
       })
   }, [])
 
-  const handleAddToOrder = (pizza: PizzaWithPrices, size: string) => {
-    // This will be implemented when we add order functionality
-    console.log(`Adding ${pizza.name} (${size}) to order`)
-  }
+  const handleAddToOrder = (pizza: PizzaWithPrices, size: string, toppings: SelectedTopping[]) => {
+    const toppingTotal = toppings.reduce((sum, t) => sum + (t.price * t.quantity), 0);
+    const unitPrice = pizza.prices[size] + toppingTotal;
+    
+    const newItem: OrderedItem = {
+      id: `${pizza.id}-${size}-${Date.now()}`,
+      itemId: pizza.id,
+      name: pizza.name,
+      size,
+      toppings,
+      quantity: 1,
+      unitPrice,
+      totalPrice: unitPrice
+    };
+    
+    setOrderedItems(prev => [...prev, newItem]);
+  };
+
+  const handleAddBeverageToOrder = (beverage: Item) => {
+    if (!beverage.price) return;
+    
+    const newItem: OrderedItem = {
+      id: `${beverage.id}-${Date.now()}`,
+      itemId: beverage.id,
+      name: beverage.name,
+      quantity: 1,
+      unitPrice: beverage.price,
+      totalPrice: beverage.price
+    };
+    
+    setOrderedItems(prev => [...prev, newItem]);
+  };
+
+  const handleRemoveItem = (id: string) => {
+    setOrderedItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleUpdateQuantity = (id: string, newQuantity: number) => {
+    setOrderedItems(prev => prev.map(item => {
+      if (item.id === id) {
+        return {
+          ...item,
+          quantity: newQuantity,
+          totalPrice: item.unitPrice * newQuantity
+        };
+      }
+      return item;
+    }));
+  };
+
+  const calculateTotals = () => {
+    const subtotal = orderedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    const tax = subtotal * 0.05; // 5% tax
+    const grandTotal = subtotal + tax;
+    return { subtotal, tax, grandTotal };
+  };
+
+  const { subtotal, tax, grandTotal } = calculateTotals();
 
   const handlePlaceOrder = async () => {
-    // Add your order placement logic here
+    if (orderedItems.length === 0) return;
+
     try {
-      // After successful order placement
-      setOrderNo(prev => {
-        const nextOrderNo = String(Number(prev) + 1)
-        return nextOrderNo
-      })
+      const orderData = {
+        order_no: orderNo,
+        items: orderedItems.map(item => ({
+          item_id: item.itemId,
+          pizza_size: item.size || null,
+          quantity: item.quantity,
+          toppings: item.toppings?.map(t => ({
+            topping_id: t.id,
+            quantity: t.quantity
+          })) || []
+        }))
+      };
+
+      const response = await fetch('http://localhost:8080/api/invoices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to place order');
+      }
+
+      // Clear the order items
+      setOrderedItems([]);
+      
+      // Increment order number
+      setOrderNo(prev => String(Number(prev) + 1));
+
     } catch (err) {
-      console.error('Error placing order:', err)
+      console.error('Error placing order:', err);
+      // You might want to show an error message to the user here
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -119,7 +203,7 @@ export default function Orders() {
                 <h3 className="font-semibold">{beverage.name}</h3>
                 <button
                   className="w-full mt-2 bg-[#00ADB5] text-white py-2 rounded-md hover:bg-[#007F85] transition-colors flex items-center justify-center"
-                  onClick={() => console.log(`Adding ${beverage.name} to order`)}
+                  onClick={() => handleAddBeverageToOrder(beverage)}
                 >
                   <img src="/shopping-cart.png" alt="Cart" className="w-4 h-4 mr-2" />
                   {beverage.price && (<b>Add Rs {beverage.price.toFixed(2)}</b>)}
@@ -133,17 +217,24 @@ export default function Orders() {
       <div className="w-1/4 pl-4 border-l">
         <h2 className="text-xl font-semibold mb-4">Order No #{orderNo}</h2>
         <h3 className="text-lg font-semibold mb-2">Ordered Items</h3>
-        <div className="mb-4">
-          {/* Ordered items will be listed here */}
+        <div className="mb-4 max-h-[400px] overflow-y-auto">
+          {orderedItems.map(item => (
+            <OrderedItemCard
+              key={item.id}
+              item={item}
+              onRemove={handleRemoveItem}
+              onUpdateQuantity={handleUpdateQuantity}
+            />
+          ))}
         </div>
         <div className="mb-2">
-          <span className="font-semibold">Subtotal:</span> $0.00
+          <span className="font-semibold">Subtotal:</span> Rs {subtotal.toFixed(2)}
         </div>
         <div className="mb-2">
-          <span className="font-semibold">Tax:</span> $0.00
+          <span className="font-semibold">Tax (5%):</span> Rs {tax.toFixed(2)}
         </div>
         <div className="mb-4">
-          <span className="font-semibold">Grandtotal:</span> $0.00
+          <span className="font-semibold">Grandtotal:</span> Rs {grandTotal.toFixed(2)}
         </div>
         <button className="w-full bg-[#3A4750] text-white py-2 rounded-md hover:bg-[#2e3639] transition-colors mb-2">
           Print Bill

@@ -26,3 +26,14 @@ export interface Topping {
 export interface SelectedTopping extends Topping {
     quantity: number;
 }
+
+export interface OrderedItem {
+  id: string;
+  itemId: number;
+  name: string;
+  size?: string;
+  toppings?: SelectedTopping[];
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
