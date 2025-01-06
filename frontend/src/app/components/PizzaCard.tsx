@@ -25,66 +25,66 @@ export default function PizzaCard({ pizza, onAddToOrder }: PizzaCardProps) {
     };
 
     return (
-        <div className="border rounded-lg overflow-hidden flex flex-col h-[500px]">
-            {/* Image container taking 60% of the card height */}
+        <div className="border rounded-lg overflow-hidden flex flex-col hover:shadow-lg">
             <div className="h-[60%] relative">
                 <img
-                    src="/api/placeholder/400/300"
+                    src={pizza.image_path
+                        ? `http://localhost:8080/${pizza.image_path}`
+                        : '/default-pizza.jpg'}
                     alt={pizza.name}
                     className="w-full h-full object-cover"
                 />
             </div>
-            
-            {/* Content container for the remaining 40% */}
+
             <div className="p-4 flex flex-col flex-1">
                 <h3 className="font-semibold text-lg">{pizza.name}</h3>
-                <p className="text-gray-600 text-sm mb-3">{pizza.description}</p>
-                
-                <div className="flex flex-col gap-2 mt-auto">
-                    <div className="flex justify-between items-center">
-                        <div className="text-lg font-semibold">
-                            ${calculateTotalPrice().toFixed(2)}
-                        </div>
-                        <div className="flex gap-1">
-                            {sizeOptions.map((size) => (
+
+                <div className="flex justify-between items-center mt-auto">
+                    <button
+                        onClick={() => setIsCustomizing(true)}
+                        className="mr-2 bg-[#3A4750] text-white py-2 px-4 rounded-md hover:bg-[#43525c] transition-colors"
+                    >
+                        Customize
+                    </button>
+                    <div className="flex justify-between items-center rounded-lg border border-white flex-1 ml-4">
+                        <div className="flex">
+                            {sizeOptions.map((size, index) => (
                                 <button
                                     key={size}
                                     onClick={() => setSelectedSize(size)}
-                                    className={`px-2 py-1 text-sm rounded-md ${
-                                        selectedSize === size
-                                            ? 'bg-blue-500 text-white'
-                                            : 'bg-gray-100 hover:bg-gray-200'
-                                    }`}
+                                    className={`px-[12px] py-[7px] text-lg text-white ${selectedSize === size
+                                        ? 'bg-[#00ADB5]'
+                                        : 'bg-[#3A4750] hover:bg-[#43525c] '
+                                        } ${index === 0
+                                            ? 'rounded-l-lg'
+                                            : index === sizeOptions.length - 1
+                                                ? 'rounded-r-lg'
+                                                : ''
+                                        }`}
                                 >
                                     {size.charAt(0).toUpperCase()}
                                 </button>
                             ))}
                         </div>
                     </div>
-                    
-                    {selectedToppings.length > 0 && (
-                        <div className="text-sm text-gray-600">
-                            Toppings: {selectedToppings.map(t => 
-                                `${t.name} (${t.quantity}x)`
-                            ).join(', ')}
-                        </div>
-                    )}
 
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setIsCustomizing(true)}
-                            className="flex-1 bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-colors"
-                        >
-                            Customize
-                        </button>
-                        <button
-                            onClick={() => onAddToOrder?.(pizza, selectedSize, selectedToppings)}
-                            className="flex-1 bg-green-500 text-white py-2 rounded-md hover:bg-green-600 transition-colors"
-                        >
-                            Add to Order
-                        </button>
-                    </div>
                 </div>
+
+                {selectedToppings.length > 0 && (
+                    <div className="text-sm text-gray-600 mt-2">
+                        Toppings: {selectedToppings.map(t =>
+                            `${t.name} (${t.quantity}x)`
+                        ).join(', ')}
+                    </div>
+                )}
+
+                <button
+                    onClick={() => onAddToOrder?.(pizza, selectedSize, selectedToppings)}
+                    className="mt-4 bg-[#00ADB5] text-white py-2 rounded-md hover:bg-[#007F85] transition-colors flex items-center justify-center"
+                >
+                    <img src="/shopping-cart.png" alt="Cart" className="w-4 h-4 mr-2" />
+                    <b>Add Rs {calculateTotalPrice().toFixed(2)}</b>
+                </button>
             </div>
 
             <CustomizeModal

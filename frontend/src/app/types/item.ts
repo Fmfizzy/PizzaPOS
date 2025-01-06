@@ -3,6 +3,7 @@ export interface Item {
     name: string;
     category: string;
     description: string;
+    image_path: string;
     is_available: boolean;
     price: number | null;
     created_at: string;

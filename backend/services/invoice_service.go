@@ -3,6 +3,7 @@ package services
 import (
 	"pizza-shop/config"
 	"pizza-shop/models"
+	"strconv"
 )
 
 type InvoiceService struct{}
@@ -57,12 +58,12 @@ func (s *InvoiceService) CreateInvoice(input models.CreateInvoiceInput) (*models
 	// Create invoice
 	var invoice models.Invoice
 	err = tx.QueryRow(`
-        INSERT INTO invoices (customer_name, total_amount, tax_amount, status)
+        INSERT INTO invoices (order_no, total_amount, tax_amount, status)
         VALUES ($1, $2, $3, 'pending')
-        RETURNING id, customer_name, total_amount, tax_amount, status, created_at
-    `, input.CustomerName, totalAmount, taxAmount).Scan(
+        RETURNING id, order_no, total_amount, tax_amount, status, created_at
+    `, input.OrderNo, totalAmount, taxAmount).Scan(
 		&invoice.ID,
-		&invoice.CustomerName,
+		&invoice.OrderNo,
 		&invoice.TotalAmount,
 		&invoice.TaxAmount,
 		&invoice.Status,
@@ -109,11 +110,11 @@ func (s *InvoiceService) CreateInvoice(input models.CreateInvoiceInput) (*models
 func (s *InvoiceService) GetInvoice(id int) (*models.Invoice, error) {
 	var invoice models.Invoice
 	err := config.DB.QueryRow(`
-        SELECT id, customer_name, total_amount, tax_amount, status, created_at
+        SELECT id, order_no, total_amount, tax_amount, status, created_at
         FROM invoices WHERE id = $1
     `, id).Scan(
 		&invoice.ID,
-		&invoice.CustomerName,
+		&invoice.OrderNo,
 		&invoice.TotalAmount,
 		&invoice.TaxAmount,
 		&invoice.Status,
@@ -181,4 +182,24 @@ func (s *InvoiceService) GetInvoice(id int) (*models.Invoice, error) {
 	}
 
 	return &invoice, nil
+}
+
+func (s *InvoiceService) GetLatestOrderNo() (string, error) {
+	var lastOrderNo string
+	err := config.DB.QueryRow(`
+		SELECT COALESCE(MAX(order_no), '9999') 
+		FROM invoices
+	`).Scan(&lastOrderNo)
+
+	if err != nil {
+		return "", err
+	}
+
+	if lastOrderNo == "9999" {
+		return "10000", nil
+	}
+
+	// Convert to integer, increment, and format back to string
+	orderNum, _ := strconv.Atoi(lastOrderNo)
+	return strconv.Itoa(orderNum + 1), nil
 }

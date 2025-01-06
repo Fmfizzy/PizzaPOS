@@ -11,6 +11,7 @@ type Item struct {
 	Description string    `json:"description"`
 	IsAvailable bool      `json:"is_available"`
 	Price       *float64  `json:"price,omitempty"`
+	ImagePath   string    `json:"image_path"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
@@ -35,6 +36,7 @@ type CreateItemInput struct {
 	Category    string   `json:"category" binding:"required"`
 	Description string   `json:"description"`
 	Price       *float64 `json:"price"`
+	ImagePath   string   `json:"image_path"`
 }
 
 type UpdateItemInput struct {
@@ -42,6 +44,7 @@ type UpdateItemInput struct {
 	Description *string  `json:"description"`
 	IsAvailable *bool    `json:"is_available"`
 	Price       *float64 `json:"price"`
+	ImagePath   string   `json:"image_path"`
 }
 
 type CreatePizzaPrice struct {
@@ -51,13 +54,13 @@ type CreatePizzaPrice struct {
 }
 
 type Invoice struct {
-	ID           int           `json:"id"`
-	CustomerName string        `json:"customer_name"`
-	TotalAmount  float64       `json:"total_amount"`
-	TaxAmount    float64       `json:"tax_amount"`
-	Status       string        `json:"status"`
-	CreatedAt    time.Time     `json:"created_at"`
-	Items        []InvoiceItem `json:"items,omitempty"`
+	ID          int           `json:"id"`
+	OrderNo     string        `json:"order_no"`
+	TotalAmount float64       `json:"total_amount"`
+	TaxAmount   float64       `json:"tax_amount"`
+	Status      string        `json:"status"`
+	CreatedAt   time.Time     `json:"created_at"`
+	Items       []InvoiceItem `json:"items,omitempty"`
 }
 
 type InvoiceItem struct {
@@ -81,8 +84,8 @@ type InvoiceItemTopping struct {
 }
 
 type CreateInvoiceInput struct {
-	CustomerName string                   `json:"customer_name" binding:"required"`
-	Items        []CreateInvoiceItemInput `json:"items" binding:"required"`
+	OrderNo string                   `json:"order_no" binding:"required"`
+	Items   []CreateInvoiceItemInput `json:"items" binding:"required"`
 }
 
 type CreateInvoiceItemInput struct {

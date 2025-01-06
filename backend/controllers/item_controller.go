@@ -2,10 +2,13 @@ package controllers
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
+	"path/filepath"
 	"pizza-shop/models"
 	"pizza-shop/services"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -137,4 +140,26 @@ func (c *ItemController) GetToppings(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, toppings)
+}
+
+func (c *ItemController) UploadImage(ctx *gin.Context) {
+	file, err := ctx.FormFile("image")
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Generate unique filename
+	ext := filepath.Ext(file.Filename)
+	filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
+	filePath := fmt.Sprintf("uploads/images/%s", filename)
+
+	if err := ctx.SaveUploadedFile(file, filePath); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"filepath": filePath,
+	})
 }

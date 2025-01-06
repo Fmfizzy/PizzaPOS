@@ -50,3 +50,13 @@ func (c *InvoiceController) GetInvoice(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, invoice)
 }
+
+func (c *InvoiceController) GetLatestOrderNo(ctx *gin.Context) {
+	orderNo, err := c.invoiceService.GetLatestOrderNo()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"order_no": orderNo})
+}
