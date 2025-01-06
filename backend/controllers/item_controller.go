@@ -192,3 +192,24 @@ func (c *ItemController) UploadImage(ctx *gin.Context) {
 		"filepath": filePath,
 	})
 }
+
+func (c *ItemController) GetPizzaPricesById(ctx *gin.Context) {
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid item ID"})
+		return
+	}
+
+	prices, err := c.itemService.GetPizzaPricesById(id)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(prices) == 0 {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "No prices found for this pizza"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"prices": prices})
+}

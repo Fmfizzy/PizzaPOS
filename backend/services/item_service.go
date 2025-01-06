@@ -295,3 +295,30 @@ func (s *ItemService) UpdatePizzaPrices(itemID int, input models.UpdatePizzaPric
 
 	return nil
 }
+
+func (s *ItemService) GetPizzaPricesById(id int) (map[string]float64, error) {
+	prices := make(map[string]float64)
+
+	rows, err := config.DB.Query(`
+        SELECT size, price 
+        FROM pizza_base_prices 
+        WHERE item_id = $1
+    `, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var size string
+		var price float64
+
+		if err := rows.Scan(&size, &price); err != nil {
+			return nil, err
+		}
+
+		prices[size] = price
+	}
+
+	return prices, nil
+}

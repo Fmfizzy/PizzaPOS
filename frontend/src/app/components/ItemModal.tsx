@@ -55,11 +55,47 @@ export default function ItemModal({ isOpen, onClose, onSubmit, editItem }: ItemM
     });
   };
 
+  const fetchPizzaPrices = async (itemId: number) => {
+    try {
+      console.log('Fetching prices for item:', itemId);
+      
+      const response = await fetch(`http://localhost:8080/api/pizzas/${itemId}/prices`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Server response:', errorText);
+        throw new Error(`Failed to fetch pizza prices: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Received pizza prices:', data);
+
+      // Update the form with the received prices
+      setItemData(prev => ({
+        ...prev,
+        pizzaPrices: {
+          small: data.prices.small?.toString() || '',
+          medium: data.prices.medium?.toString() || '',
+          large: data.prices.large?.toString() || ''
+        }
+      }));
+    } catch (err) {
+      console.error('Error fetching pizza prices:', err);
+    }
+  };
+
   useEffect(() => {
     if (!isOpen) {
       resetForm();
     } else if (editItem) {
-      // Set item data without pizza prices
+      // Set initial item data
       setItemData({
         name: editItem.name || '',
         category: editItem.category as 'pizza' | 'beverage',
@@ -74,31 +110,13 @@ export default function ItemModal({ isOpen, onClose, onSubmit, editItem }: ItemM
         }
       });
 
-      // If it's a pizza, fetch its prices
-      if (editItem.category === 'pizza') {
+      // Fetch pizza prices if it's a pizza
+      if (editItem.category === 'pizza' && editItem.id) {
+        console.log('Fetching prices for pizza:', editItem.id);
         fetchPizzaPrices(editItem.id);
       }
     }
   }, [isOpen, editItem]);
-
-  const fetchPizzaPrices = async (itemId: number) => {
-    try {
-      const response = await fetch(`http://localhost:8080/api/pizzas-with-prices/${itemId}`);
-      if (!response.ok) throw new Error('Failed to fetch pizza prices');
-      
-      const data = await response.json();
-      setItemData(prev => ({
-        ...prev,
-        pizzaPrices: {
-          small: data.prices?.small?.toString() || '',
-          medium: data.prices?.medium?.toString() || '',
-          large: data.prices?.large?.toString() || ''
-        }
-      }));
-    } catch (err) {
-      console.error('Error fetching pizza prices:', err);
-    }
-  };
 
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {};

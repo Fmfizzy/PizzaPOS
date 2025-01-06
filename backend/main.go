@@ -50,8 +50,9 @@ func main() {
 
 	// Pizza prices
 	r.GET("/api/pizzas-with-prices", itemController.GetPizzasWithPrices)
+	r.GET("/api/pizzas/:id/prices", itemController.GetPizzaPricesById)
 	r.POST("/api/pizzaprice", itemController.CreatePizzaPrices)
-	r.PUT("/api/pizzaprice/:id", itemController.UpdatePizzaPrices) // Add this line
+	r.PUT("/api/pizzaprice/:id", itemController.UpdatePizzaPrices)
 
 	// Toppings
 	r.GET("/api/toppings", itemController.GetToppings)
