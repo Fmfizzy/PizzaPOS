@@ -60,3 +60,29 @@ func (c *InvoiceController) GetLatestOrderNo(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{"order_no": orderNo})
 }
+
+func (c *InvoiceController) GetAllInvoices(ctx *gin.Context) {
+	invoices, err := c.invoiceService.GetAllInvoices()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, invoices)
+}
+
+func (c *InvoiceController) GetInvoiceItems(ctx *gin.Context) {
+	invoiceID, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid invoice ID"})
+		return
+	}
+
+	items, err := c.invoiceService.GetInvoiceItems(invoiceID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, items)
+}

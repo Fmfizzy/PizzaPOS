@@ -58,7 +58,9 @@ func main() {
 
 	// Invoice routes
 	r.POST("/api/invoices", invoiceController.CreateInvoice)
+	r.GET("/api/invoices", invoiceController.GetAllInvoices)
 	r.GET("/api/invoices/:id", invoiceController.GetInvoice)
+	r.GET("/api/invoices/:id/items", invoiceController.GetInvoiceItems)
 	r.GET("/api/invoices/latest-order-no", invoiceController.GetLatestOrderNo)
 
 	r.Run(":8080")

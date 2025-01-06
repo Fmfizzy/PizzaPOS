@@ -28,7 +28,7 @@ func (s *InvoiceService) CreateInvoice(input models.CreateInvoiceInput) (*models
 	var invoice models.Invoice
 	err = tx.QueryRow(`
         INSERT INTO invoices (order_no, total_amount, tax_amount, status)
-        VALUES ($1, $2, $3, 'pending')
+        VALUES ($1, $2, $3, 'completed')
         RETURNING id, order_no, total_amount, tax_amount, status, created_at
     `, input.OrderNo, totalAmount, taxAmount).Scan(
 		&invoice.ID,
@@ -168,4 +168,95 @@ func (s *InvoiceService) GetLatestOrderNo() (string, error) {
 	// Convert to integer, increment, and format back to string
 	orderNum, _ := strconv.Atoi(lastOrderNo)
 	return strconv.Itoa(orderNum + 1), nil
+}
+
+func (s *InvoiceService) GetAllInvoices() ([]models.Invoice, error) {
+	rows, err := config.DB.Query(`
+		SELECT id, order_no, total_amount, tax_amount, status, created_at
+		FROM invoices
+		ORDER BY created_at DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var invoices []models.Invoice
+	for rows.Next() {
+		var invoice models.Invoice
+		err := rows.Scan(
+			&invoice.ID,
+			&invoice.OrderNo,
+			&invoice.TotalAmount,
+			&invoice.TaxAmount,
+			&invoice.Status,
+			&invoice.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		invoices = append(invoices, invoice)
+	}
+
+	return invoices, nil
+}
+
+func (s *InvoiceService) GetInvoiceItems(invoiceID int) ([]models.InvoiceItem, error) {
+	rows, err := config.DB.Query(`
+		SELECT ii.id, ii.invoice_id, ii.item_name, ii.quantity, ii.unit_price, ii.subtotal
+		FROM invoice_items ii
+		WHERE ii.invoice_id = $1
+		ORDER BY ii.id ASC
+	`, invoiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []models.InvoiceItem
+	for rows.Next() {
+		var item models.InvoiceItem
+		err := rows.Scan(
+			&item.ID,
+			&item.InvoiceID,
+			&item.ItemName,
+			&item.Quantity,
+			&item.UnitPrice,
+			&item.Subtotal,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Get toppings for each item
+		toppingRows, err := config.DB.Query(`
+			SELECT iit.id, iit.topping_id, t.name, iit.quantity, iit.price
+			FROM invoice_item_toppings iit
+			JOIN toppings t ON t.id = iit.topping_id
+			WHERE iit.invoice_item_id = $1
+		`, item.ID)
+		if err != nil {
+			return nil, err
+		}
+		defer toppingRows.Close()
+
+		for toppingRows.Next() {
+			var topping models.InvoiceItemTopping
+			err := toppingRows.Scan(
+				&topping.ID,
+				&topping.ToppingID,
+				&topping.Name,
+				&topping.Quantity,
+				&topping.Price,
+			)
+			if err != nil {
+				return nil, err
+			}
+			item.Toppings = append(item.Toppings, topping)
+		}
+
+		items = append(items, item)
+	}
+
+	return items, nil
 }
