@@ -26,8 +26,8 @@ export default function Header() {
                 href={item.href}
                 className={`px-3 py-2 rounded-md text-sm font-medium ${
                   pathname === item.href
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-700 hover:bg-gray-200'
+                    ? 'bg-[#00ADB5] text-white'
+                    : 'text-[#3A4750] hover:bg-gray-200'
                 }`}
               >
                 {item.label}

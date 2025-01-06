@@ -16,6 +16,7 @@ export default function Orders() {
   const [orderedItems, setOrderedItems] = useState<OrderedItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState<'pizza' | 'beverage'>('pizza')
+  const [isMobileOrderVisible, setIsMobileOrderVisible] = useState(false);
 
   const fetchLatestOrderNo = async () => {
     try {
@@ -237,8 +238,8 @@ export default function Orders() {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 flex">
-      <div className="w-3/4 pr-4">
+    <div className="bg-white rounded-lg shadow p-6 flex relative">
+      <div className={`w-full md:w-3/4 pr-4 ${isMobileOrderVisible ? 'hidden' : 'block'} md:block`}>
         <h1 className="text-2xl font-bold mb-4">Shop Orders</h1>
         
         {/* Search and Filter Section */}
@@ -251,9 +252,6 @@ export default function Orders() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#00ADB5]"
             />
-            <button className="px-4 py-2 bg-[#00ADB5] text-white rounded-md hover:bg-[#007F85]">
-              Search
-            </button>
           </div>
           <div className="flex justify-center gap-4 mb-4">
             <button
@@ -298,22 +296,22 @@ export default function Orders() {
         {activeTab === 'beverage' && (
           <div>
             <h2 className="text-xl font-semibold mb-4">Beverages</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredBeverages.map((beverage) => (
                 <div
                   key={beverage.id}
                   className="border rounded-lg p-4 hover:shadow-lg transition-shadow"
                 >
-                  <div className="h-[60%] relative mb-4">
+                  <div className="h-80 relative mb-4">
                     <img
                       src={beverage.image_path 
                         ? `http://localhost:8080/${beverage.image_path}`
                         : '/default-beverage.jpg'}
                       alt={beverage.name}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover rounded-lg"
                     />
                   </div>
-                  <h3 className="font-semibold">{beverage.name}</h3>
+                  <h3 className="font-semibold text-lg mb-2">{beverage.name}</h3>
                   <button
                     className="w-full mt-2 bg-[#00ADB5] text-white py-2 rounded-md hover:bg-[#007F85] transition-colors flex items-center justify-center"
                     onClick={() => handleAddBeverageToOrder(beverage)}
@@ -328,7 +326,29 @@ export default function Orders() {
         )}
       </div>
 
-      <div className="w-1/4 pl-4 border-l">
+      {/* Mobile Order Toggle Button */}
+      <button 
+        className="md:hidden fixed right-4 bottom-1/2 transform translate-y-1/2 z-10 bg-[#00ADB5] text-white p-3 rounded-l-lg shadow-lg"
+        onClick={() => setIsMobileOrderVisible(true)}
+      >
+        <img src="/shopping-cart.png" alt="Cart" className="w-6 h-6" />
+      </button>
+
+      {/* Order Section */}
+      <div className={`
+        ${isMobileOrderVisible ? 'fixed inset-0 bg-white z-20 overflow-auto p-4' : 'hidden'} 
+        md:relative md:block md:w-1/4 md:pl-4 md:border-l
+      `}>
+        {/* Close button - only visible on mobile */}
+        <button 
+          className="md:hidden absolute top-4 right-4 p-2"
+          onClick={() => setIsMobileOrderVisible(false)}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
         <h2 className="text-xl font-semibold mb-4">Order No #{orderNo}</h2>
         <h3 className="text-lg font-semibold mb-2">Ordered Items</h3>
         <div className="mb-4 max-h-[400px] overflow-y-auto">
