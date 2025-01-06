@@ -91,13 +91,6 @@ export default function PrintReceipt({
                     )}
                   </tr>
                 ))}
-                {item.toppings && item.toppings.length > 0 && (
-                  <tr>
-                    <td colSpan={3} className="text-xs py-1 pl-2">
-                      Toppings: {item.toppings.map(t => `${t.name}(${t.quantity})`).join(', ')}
-                    </td>
-                  </tr>
-                )}
               </Fragment>
             ))}
             <tr className="border-t border-dashed">
