@@ -6,6 +6,23 @@ export default function ManageItems() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'pizza' | 'beverage'>('pizza');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newItem, setNewItem] = useState({
+    name: '',
+    category: 'pizza',
+    description: '',
+    price: '',
+    image_path: '',
+    pizzaPrices: {
+      small: '',
+      medium: '',
+      large: ''
+    }
+  });
 
   useEffect(() => {
     fetchItems();
@@ -26,43 +43,354 @@ export default function ManageItems() {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  const handleDelete = async (item: Item) => {
+    setItemToDelete(item);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+
+    try {
+        const response = await fetch(`http://localhost:8080/api/items/${itemToDelete.id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to delete item');
+        }
+        
+        // Only update UI if delete was successful
+        setItems(items.filter(item => item.id !== itemToDelete.id));
+        setShowDeleteConfirm(false);
+        setItemToDelete(null);
+    } catch (err) {
+        console.error('Error deleting item:', err);
+        alert(err instanceof Error ? err.message : 'Failed to delete item');
+    }
+};
+
+  const handleAddItem = async () => {
+    try {
+      // First create the item
+      const response = await fetch('http://localhost:8080/api/items', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...newItem,
+          price: newItem.category === 'beverage' ? parseFloat(newItem.price) : null
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to add item');
+
+      const addedItem = await response.json();
+
+      // If it's a pizza, add the base prices
+      if (newItem.category === 'pizza') {
+        const sizePrices = ['small', 'medium', 'large'];
+        
+        for (const size of sizePrices as Array<keyof typeof newItem.pizzaPrices>) {
+          const priceResponse = await fetch('http://localhost:8080/api/pizzaprice', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              item_id: addedItem.id,
+              size: size,
+              price: parseFloat(newItem.pizzaPrices[size])
+            }),
+          });
+
+          if (!priceResponse.ok) {
+            throw new Error(`Failed to add price for ${size}`);
+          }
+        }
+      }
+
+      await fetchItems(); // Refresh the items list
+      setShowAddModal(false);
+      setNewItem({
+        name: '',
+        category: 'pizza',
+        description: '',
+        price: '',
+        image_path: '',
+        pizzaPrices: { small: '', medium: '', large: '' }
+      });
+    } catch (err) {
+      console.error('Error adding item:', err);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await fetch('http://localhost:8080/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Failed to upload image');
+
+      const data = await response.json();
+      setNewItem(prev => ({ ...prev, image_path: data.filepath }));
+    } catch (err) {
+      console.error('Error uploading image:', err);
+    }
+  };
+
+  const filteredItems = items.filter(item => 
+    item.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+    item.category.toLowerCase() === activeTab
+  );
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
+      </div>
+    );
+  }
+
+  if (error) return <div className="bg-red-50 text-red-500 p-4 rounded-lg">Error: {error}</div>;
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h1 className="text-2xl font-bold mb-6">Manage Items</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {items.map((item) => (
-          <div 
-            key={item.id}
-            className="border rounded-lg p-4 hover:shadow-lg transition-shadow"
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Manage Items</h1>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="bg-[#27B500] text-white px-4 py-2 rounded-md hover:bg-[#219400] transition-colors flex items-center"
+        >
+          <span className="text-2xl mr-1">+</span> Add Item
+        </button>
+      </div>
+
+      {/* Search and Filter Section */}
+      <div className="mb-6">
+        <div className="flex gap-2 mb-4">
+          <input
+            type="text"
+            placeholder="Search items..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#00ADB5]"
+          />
+          <button className="px-4 py-2 bg-[#00ADB5] text-white rounded-md hover:bg-[#007F85]">
+            Search
+          </button>
+        </div>
+        <div className="flex justify-center gap-4 mb-4">
+          <button
+            className={`px-6 py-2 rounded-md transition-colors ${
+              activeTab === 'pizza'
+                ? 'bg-[#00ADB5] text-white'
+                : 'bg-[#3A4750] hover:bg-[#2e3639] text-white'
+            }`}
+            onClick={() => setActiveTab('pizza')}
           >
-            <h3 className="font-semibold text-lg">{item.name}</h3>
-            <p className="text-gray-600">{item.description}</p>
-            <div className="mt-2 flex justify-between items-center">
-              <span className="text-sm text-gray-500">
-                Category: {item.category}
-              </span>
-              {item.price && (
-                <span className="font-medium">
-                  ${item.price.toFixed(2)}
-                </span>
-              )}
+            Pizzas
+          </button>
+          <button
+            className={`px-6 py-2 rounded-md transition-colors ${
+              activeTab === 'beverage'
+                ? 'bg-[#00ADB5] text-white'
+                : 'bg-[#3A4750] hover:bg-[#2e3639] text-white'
+            }`}
+            onClick={() => setActiveTab('beverage')}
+          >
+            Beverages
+          </button>
+        </div>
+      </div>
+
+      {/* Items Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredItems.map((item) => (
+          <div key={item.id} className="border rounded-lg overflow-hidden flex flex-col hover:shadow-lg">
+            <div className="h-[200px] relative">
+              <img
+                src={item.image_path
+                  ? `http://localhost:8080/${item.image_path}`
+                  : item.category === 'pizza' ? '/default-pizza.jpg' : '/default-beverage.jpg'}
+                alt={item.name}
+                className="w-full h-full object-cover"
+              />
             </div>
-            <div className="mt-2">
-              <span className={`px-2 py-1 rounded-full text-xs ${
-                item.is_available 
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-red-100 text-red-800'
-              }`}>
-                {item.is_available ? 'Available' : 'Unavailable'}
-              </span>
+            <div className="p-4 flex flex-col flex-1">
+              <h3 className="font-semibold text-lg">{item.name}</h3>
+              <p className="text-gray-600 text-sm mb-4">Category: {item.category}</p>
+              
+              <div className="mt-auto flex gap-2">
+                <button
+                  onClick={() => handleDelete(item)}
+                  className="flex-1 bg-red-500 text-white py-2 rounded-md hover:bg-red-600 transition-colors flex items-center justify-center"
+                >
+                  <img src="/delete-white.png" alt="Delete" className="w-4 h-4 mr-2" />
+                  Delete
+                </button>
+                <button
+                  className="flex-1 bg-[#00ADB5] text-white py-2 rounded-md hover:bg-[#007F85] transition-colors"
+                >
+                  Edit Item
+                </button>
+              </div>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Add Item Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Add New Item</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Name</label>
+                <input
+                  type="text"
+                  value={newItem.name}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full p-2 border rounded-md"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Category</label>
+                <select
+                  value={newItem.category}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, category: e.target.value }))}
+                  className="w-full p-2 border rounded-md"
+                >
+                  <option value="pizza">Pizza</option>
+                  <option value="beverage">Beverage</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea
+                  value={newItem.description}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full p-2 border rounded-md"
+                />
+              </div>
+              {newItem.category === 'beverage' ? (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Price</label>
+                  <input
+                    type="number"
+                    value={newItem.price}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, price: e.target.value }))}
+                    className="w-full p-2 border rounded-md"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <h4 className="font-medium">Pizza Prices</h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Small</label>
+                      <input
+                        type="number"
+                        value={newItem.pizzaPrices.small}
+                        onChange={(e) => setNewItem(prev => ({
+                          ...prev,
+                          pizzaPrices: { ...prev.pizzaPrices, small: e.target.value }
+                        }))}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Medium</label>
+                      <input
+                        type="number"
+                        value={newItem.pizzaPrices.medium}
+                        onChange={(e) => setNewItem(prev => ({
+                          ...prev,
+                          pizzaPrices: { ...prev.pizzaPrices, medium: e.target.value }
+                        }))}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Large</label>
+                      <input
+                        type="number"
+                        value={newItem.pizzaPrices.large}
+                        onChange={(e) => setNewItem(prev => ({
+                          ...prev,
+                          pizzaPrices: { ...prev.pizzaPrices, large: e.target.value }
+                        }))}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium mb-1">Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="w-full"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex gap-4 justify-end">
+              <button
+                className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+                onClick={() => setShowAddModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-[#27B500] text-white rounded-md hover:bg-[#219400]"
+                onClick={handleAddItem}
+              >
+                Add Item
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-sm w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Confirm Delete</h3>
+            <p>Are you sure you want to delete {itemToDelete?.name}?</p>
+            <div className="mt-6 flex gap-4 justify-end">
+              <button
+                className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+                onClick={confirmDelete}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

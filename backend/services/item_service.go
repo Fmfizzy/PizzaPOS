@@ -146,18 +146,38 @@ func (s *ItemService) UpdateItem(id int, input models.UpdateItemInput) (*models.
 }
 
 func (s *ItemService) DeleteItem(id int) error {
-	result, err := config.DB.Exec("DELETE FROM items WHERE id = $1", id)
+	// Start a transaction
+	tx, err := config.DB.Begin()
 	if err != nil {
 		return err
 	}
-	count, err := result.RowsAffected()
+
+	// First check if the item exists
+	var exists bool
+	err = config.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM items WHERE id = $1)", id).Scan(&exists)
 	if err != nil {
 		return err
 	}
-	if count == 0 {
+	if !exists {
 		return sql.ErrNoRows
 	}
-	return nil
+
+	// Delete from pizza_base_prices first (if any)
+	_, err = tx.Exec("DELETE FROM pizza_base_prices WHERE item_id = $1", id)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Then delete the item
+	_, err = tx.Exec("DELETE FROM items WHERE id = $1", id)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Commit the transaction
+	return tx.Commit()
 }
 
 func (s *ItemService) GetPizzasWithPrices() ([]models.PizzaWithPrices, error) {

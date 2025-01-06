@@ -14,9 +14,15 @@ export default function OrderedItemCard({ item, onRemove, onUpdateQuantity }: Or
 
   return (
     <div className="flex items-center justify-between p-2 border-b">
+      <button 
+        onClick={() => onRemove(item.id)}
+        className="mr-4 h-8 w-8"
+      >
+        <img src="/delete.png" alt="Remove" />
+      </button>
+      
       <div className="flex-1">
         <div className="font-medium">{item.name}</div>
-        {item.size && <div className="text-sm text-gray-600">Size: {item.size}</div>}
         {item.toppings && item.toppings.length > 0 && (
           <div className="text-sm text-gray-600">
             Toppings: {item.toppings.map(t => `${t.name} (${t.quantity}x)`).join(', ')}
@@ -24,30 +30,23 @@ export default function OrderedItemCard({ item, onRemove, onUpdateQuantity }: Or
         )}
       </div>
       
-      <div className="flex items-center gap-2">
-        <button 
-          onClick={() => handleQuantityChange(false)}
-          className="px-2 py-1 bg-gray-200 rounded"
-        >
-          -
-        </button>
-        <span className="w-8 text-center">{item.quantity}</span>
-        <button 
-          onClick={() => handleQuantityChange(true)}
-          className="px-2 py-1 bg-gray-200 rounded"
-        >
-          +
-        </button>
-      </div>
-      
-      <div className="ml-4 flex items-center gap-2">
+      <div className="flex flex-col items-end gap-2">
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => handleQuantityChange(false)}
+            className="px-2 py-1 bg-[#00ADB5] text-white rounded"
+          >
+            -
+          </button>
+          <span className="w-8 text-center">{item.quantity}</span>
+          <button 
+            onClick={() => handleQuantityChange(true)}
+            className="px-2 py-1 bg-[#00ADB5]  text-white rounded"
+          >
+            +
+          </button>
+        </div>
         <span className="font-medium">Rs {item.totalPrice.toFixed(2)}</span>
-        <button 
-          onClick={() => onRemove(item.id)}
-          className="text-red-500 hover:text-red-700"
-        >
-          ✕
-        </button>
       </div>
     </div>
   );

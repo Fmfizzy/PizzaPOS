@@ -66,9 +66,7 @@ type Invoice struct {
 type InvoiceItem struct {
 	ID        int                  `json:"id"`
 	InvoiceID int                  `json:"invoice_id"`
-	ItemID    int                  `json:"item_id"`
 	ItemName  string               `json:"item_name"`
-	PizzaSize *string              `json:"pizza_size,omitempty"`
 	Quantity  int                  `json:"quantity"`
 	UnitPrice float64              `json:"unit_price"`
 	Subtotal  float64              `json:"subtotal"`
@@ -89,9 +87,9 @@ type CreateInvoiceInput struct {
 }
 
 type CreateInvoiceItemInput struct {
-	ItemID    int                         `json:"item_id" binding:"required"`
-	PizzaSize *string                     `json:"pizza_size"`
+	ItemName  string                      `json:"item_name" binding:"required"`
 	Quantity  int                         `json:"quantity" binding:"required"`
+	UnitPrice float64                     `json:"unit_price" binding:"required"`
 	Toppings  []CreateInvoiceToppingInput `json:"toppings"`
 }
 

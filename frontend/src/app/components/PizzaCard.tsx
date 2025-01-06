@@ -92,6 +92,7 @@ export default function PizzaCard({ pizza, onAddToOrder }: PizzaCardProps) {
                 onClose={() => setIsCustomizing(false)}
                 onSave={setSelectedToppings}
                 currentToppings={selectedToppings}
+                pizza={pizza}  // Make sure this prop is being passed
             />
         </div>
     );
